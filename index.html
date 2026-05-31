@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0C41C4" />
+  <meta name="color-scheme" content="light" />
+  <title>MusiBot Lector — Musicala</title>
+
+  <link rel="icon" href="./assets/logo.png" />
+  <link rel="apple-touch-icon" href="./assets/logo.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ═══ LOGIN ══════════════════════════════════════════════════════════════ -->
+  <div id="view-login">
+    <div class="login-card">
+      <div class="login-logo">
+        <img src="./assets/logo.png" alt="Musicala" />
+      </div>
+      <h1>MusiBot Lector</h1>
+      <p class="login-sub">Panel de usuarios · Musicala</p>
+
+      <button id="btn-google-login">
+        <svg width="18" height="18" viewBox="0 0 48 48" style="vertical-align:middle;margin-right:9px;flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Continuar con Google
+      </button>
+      <p id="login-error" class="hidden"></p>
+    </div>
+  </div>
+
+  <!-- ═══ DASHBOARD ══════════════════════════════════════════════════════════ -->
+  <div id="view-dashboard" class="hidden">
+
+    <!-- Aviso de setup (solo si Firestore da permission-denied) -->
+    <div id="setup-notice" class="hidden">
+      <strong>Acción requerida:</strong>
+      Firestore bloqueó las lecturas. Actualiza las reglas en
+      <a href="https://console.firebase.google.com/project/musibot-d75e6/firestore/rules" target="_blank" rel="noopener">
+        Firebase Console
+      </a> para permitir lectura a usuarios autenticados.
+    </div>
+
+    <!-- Header -->
+    <header>
+      <div class="hdr-left">
+        <img class="hdr-logo" src="./assets/logo.png" alt="Musicala" />
+        <div class="hdr-titles">
+          <h1>MusiBot Lector</h1>
+          <span class="hdr-sub">Panel de usuarios · Musicala</span>
+        </div>
+      </div>
+      <div class="hdr-right">
+        <span class="hdr-user" id="user-email"></span>
+        <button id="btn-logout">Salir</button>
+      </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+      <div class="stat-card">
+        <span class="stat-num" id="stat-total">0</span>
+        <span class="stat-label">Total sesiones</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" id="stat-interactive">0</span>
+        <span class="stat-label">Interactuaron</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" id="stat-with-phone">0</span>
+        <span class="stat-label">Con teléfono</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" id="stat-whatsapp">0</span>
+        <span class="stat-label">Fueron a WA</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" id="stat-conversion">0%</span>
+        <span class="stat-label">Conversión</span>
+      </div>
+    </div>
+
+    <!-- Embudo -->
+    <div id="funnel-bar">
+      <span class="funnel-label">Embudo:</span>
+      <div class="funnel-steps" id="funnel-steps"></div>
+      <span class="funnel-hint" id="funnel-hint"></span>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="sessions">Sesiones</button>
+      <button class="tab" data-tab="gaps">Knowledge Gaps</button>
+    </div>
+
+    <!-- ── Panel: Sesiones ─────────────────────────────────────────────────── -->
+    <div id="panel-sessions" class="panel">
+
+      <!-- Gráfica últimos 7 días -->
+      <div class="chart-card">
+        <span class="chart-title">Sesiones últimos 7 días</span>
+        <div class="chart-bars" id="chart-7d"></div>
+      </div>
+
+      <div class="filters">
+        <input id="filter-search"    type="text"  placeholder="Buscar por nombre, celular o servicio…" />
+        <select id="filter-arte"><option value="">Todas las artes</option></select>
+        <select id="filter-modalidad">
+          <option value="">Todas las modalidades</option>
+          <option value="sede">Sede</option>
+          <option value="hogar">Hogar</option>
+          <option value="virtual">Virtual</option>
+        </select>
+        <input id="filter-from" type="date" title="Desde" />
+        <input id="filter-to"   type="date" title="Hasta" />
+        <button id="btn-clear-filters" class="btn-ghost">Limpiar</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Celular</th>
+              <th>Servicio</th>
+              <th>Arte</th>
+              <th>Modalidad</th>
+              <th>Edad</th>
+              <th>Actividad</th>
+              <th>Última actividad</th>
+            </tr>
+          </thead>
+          <tbody id="sessions-tbody"></tbody>
+        </table>
+      </div>
+      <p id="sessions-empty" class="empty-state hidden">No hay sesiones que coincidan con los filtros.</p>
+    </div>
+
+    <!-- ── Panel: Knowledge Gaps ───────────────────────────────────────────── -->
+    <div id="panel-gaps" class="panel hidden">
+      <div class="filters">
+        <select id="filter-gap-status">
+          <option value="new">Sin revisar</option>
+          <option value="reviewed">Revisadas</option>
+          <option value="">Todas</option>
+        </select>
+        <select id="filter-gap-lang">
+          <option value="">Todos los idiomas</option>
+          <option value="es">Español</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      <div id="gaps-list"></div>
+      <p id="gaps-empty" class="empty-state hidden">No hay knowledge gaps en esta categoría.</p>
+    </div>
+
+  </div><!-- /#view-dashboard -->
+
+  <!-- ═══ SIDE PANEL ═════════════════════════════════════════════════════════ -->
+  <div id="side-panel" class="hidden">
+    <div class="sp-header">
+      <h2 id="side-panel-title">Detalle</h2>
+      <button id="btn-close-panel" title="Cerrar">✕</button>
+    </div>
+    <div id="side-panel-content"></div>
+  </div>
+
+  <div id="overlay" class="hidden"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
