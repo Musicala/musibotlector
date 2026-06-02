@@ -57,6 +57,7 @@
         </div>
       </div>
       <div class="hdr-right">
+        <button id="btn-export-ai" class="btn-primary">Descargar IA</button>
         <span class="hdr-user" id="user-email"></span>
         <button id="btn-logout">Salir</button>
       </div>
@@ -117,9 +118,44 @@
           <option value="hogar">Hogar</option>
           <option value="virtual">Virtual</option>
         </select>
+        <select id="filter-whatsapp" title="WhatsApp">
+          <option value="">WhatsApp: todos</option>
+          <option value="yes">Fueron a WhatsApp</option>
+          <option value="no">No fueron a WhatsApp</option>
+        </select>
+        <select id="filter-lead" title="Tipo de lead">
+          <option value="">Todos los leads</option>
+          <option value="complete">Lead completo</option>
+          <option value="phone">Tiene teléfono</option>
+          <option value="name">Tiene nombre</option>
+          <option value="empty">Sin datos</option>
+          <option value="interacted">Solo interactuó</option>
+        </select>
+        <select id="filter-activity" title="Actividad">
+          <option value="">Toda actividad</option>
+          <option value="low">Baja actividad</option>
+          <option value="mid">Actividad media</option>
+          <option value="high">Actividad alta</option>
+        </select>
+        <select id="filter-freetext" title="Texto libre">
+          <option value="">Texto libre: todos</option>
+          <option value="yes">Con texto libre</option>
+          <option value="no">Sin texto libre</option>
+        </select>
+        <select id="filter-source" title="Origen"><option value="">Todos los orígenes</option></select>
+        <input id="filter-min-events" type="number" min="0" step="1" placeholder="Mín. eventos" title="Mínimo de eventos" />
         <input id="filter-from" type="date" title="Desde" />
         <input id="filter-to"   type="date" title="Hasta" />
-        <button id="btn-clear-filters" class="btn-ghost">Limpiar</button>
+        <button id="btn-quick-wa" class="btn-ghost">Ver solo WhatsApp</button>
+        <button id="btn-quick-pending" class="btn-ghost">Ver pendientes para IA</button>
+        <button id="btn-clear-filters" class="btn-ghost">Limpiar todo</button>
+      </div>
+
+      <div id="active-filter-chips" class="filter-chips hidden"></div>
+
+      <div class="table-meta">
+        <span id="sessions-count" class="table-count"></span>
+        <span id="stats-scope-note" class="scope-note">Datos globales</span>
       </div>
 
       <div class="table-wrap">
@@ -133,6 +169,7 @@
               <th>Modalidad</th>
               <th>Edad</th>
               <th>Actividad</th>
+              <th>Estado</th>
               <th>Última actividad</th>
             </tr>
           </thead>
@@ -144,20 +181,68 @@
 
     <!-- ── Panel: Knowledge Gaps ───────────────────────────────────────────── -->
     <div id="panel-gaps" class="panel hidden">
-      <div class="filters">
-        <select id="filter-gap-status">
-          <option value="new">Sin revisar</option>
-          <option value="reviewed">Revisadas</option>
-          <option value="">Todas</option>
-        </select>
-        <select id="filter-gap-lang">
-          <option value="">Todos los idiomas</option>
-          <option value="es">Español</option>
-          <option value="en">English</option>
-        </select>
+
+      <div class="subtabs">
+        <button class="subtab active" data-subtab="registered">Gaps registrados</button>
+        <button class="subtab" data-subtab="candidates">Posibles gaps detectados</button>
+        <button class="subtab" data-subtab="messages">Mensajes del cliente</button>
       </div>
-      <div id="gaps-list"></div>
-      <p id="gaps-empty" class="empty-state hidden">No hay knowledge gaps en esta categoría.</p>
+
+      <!-- Sub-panel: Gaps registrados -->
+      <div id="subpanel-registered" class="subpanel">
+        <div class="filters">
+          <select id="filter-gap-status">
+            <option value="new">Sin revisar</option>
+            <option value="reviewed">Revisadas</option>
+            <option value="">Todas</option>
+          </select>
+          <select id="filter-gap-lang">
+            <option value="">Todos los idiomas</option>
+            <option value="es">Español</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+        <div id="gaps-list"></div>
+        <p id="gaps-empty" class="empty-state hidden">No hay knowledge gaps en esta categoría.</p>
+      </div>
+
+      <!-- Sub-panel: Posibles gaps detectados -->
+      <div id="subpanel-candidates" class="subpanel hidden">
+        <div class="filters">
+          <select id="filter-candidate-confidence">
+            <option value="">Toda confianza</option>
+            <option value="alta">Confianza alta</option>
+            <option value="media">Confianza media</option>
+            <option value="baja">Confianza baja</option>
+          </select>
+          <button id="btn-load-candidates" class="btn-ghost">Detectar posibles gaps</button>
+          <span id="candidates-count" class="table-count"></span>
+        </div>
+        <div id="candidates-list"></div>
+        <p id="candidates-empty" class="empty-state hidden">Pulsa “Detectar posibles gaps” para analizar los mensajes de los clientes.</p>
+      </div>
+
+      <!-- Sub-panel: Mensajes del cliente -->
+      <div id="subpanel-messages" class="subpanel hidden">
+        <div class="filters">
+          <input id="filter-msg-search" type="text" placeholder="Buscar texto…" />
+          <select id="filter-msg-kind">
+            <option value="">Todos los mensajes</option>
+            <option value="question">Solo con pregunta</option>
+            <option value="price">Solo precios/costos</option>
+            <option value="schedule">Solo horarios</option>
+            <option value="whatsapp">Solo de WhatsApp</option>
+            <option value="nophone">Solo sin teléfono</option>
+          </select>
+          <input id="filter-msg-from" type="date" title="Desde" />
+          <input id="filter-msg-to" type="date" title="Hasta" />
+          <button id="btn-load-messages" class="btn-ghost">Cargar mensajes</button>
+          <span id="messages-count" class="table-count"></span>
+        </div>
+        <div id="messages-list"></div>
+        <p id="messages-empty" class="empty-state hidden">Pulsa “Cargar mensajes” para ver todo lo que dijeron los clientes.</p>
+      </div>
+
     </div>
 
   </div><!-- /#view-dashboard -->
@@ -169,6 +254,77 @@
       <button id="btn-close-panel" title="Cerrar">✕</button>
     </div>
     <div id="side-panel-content"></div>
+  </div>
+
+  <!-- ═══ MODAL: Descargar conocimiento para IA ══════════════════════════════ -->
+  <div id="export-modal-backdrop" class="modal-backdrop hidden">
+    <div id="export-modal" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
+      <div class="modal-header">
+        <h2 id="export-modal-title">Descargar conocimiento para IA</h2>
+        <button id="btn-close-export-modal" class="modal-close" title="Cerrar">✕</button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- Última exportación -->
+        <section class="modal-sec">
+          <h3 class="sec-title">Última exportación</h3>
+          <div id="last-export-info" class="last-export-box">Cargando…</div>
+          <p id="since-last-info" class="since-info"></p>
+        </section>
+
+        <!-- Alcance -->
+        <section class="modal-sec">
+          <h3 class="sec-title">Alcance de la descarga</h3>
+          <select id="export-scope">
+            <option value="since_last_export">Desde la última descarga</option>
+            <option value="current_filters">Usar filtros actuales</option>
+            <option value="custom_range">Rango personalizado</option>
+            <option value="all">Todo el historial</option>
+            <option value="whatsapp_only">Solo sesiones que fueron a WhatsApp</option>
+            <option value="gaps_only">Solo knowledge gaps sin revisar</option>
+          </select>
+          <div id="export-custom-range" class="custom-range hidden">
+            <input id="export-from" type="date" title="Desde" />
+            <input id="export-to" type="date" title="Hasta" />
+          </div>
+        </section>
+
+        <!-- Opciones -->
+        <section class="modal-sec">
+          <h3 class="sec-title">Qué incluir</h3>
+          <div class="opt-grid">
+            <label><input type="checkbox" id="opt-sessions" checked /> Incluir sesiones</label>
+            <label><input type="checkbox" id="opt-events" checked /> Incluir eventos completos</label>
+            <label><input type="checkbox" id="opt-messages" checked /> Incluir mensajes del usuario</label>
+            <label><input type="checkbox" id="opt-gaps" checked /> Incluir Knowledge Gaps registrados</label>
+            <label><input type="checkbox" id="opt-candidates" checked /> Incluir posibles gaps detectados</label>
+            <label><input type="checkbox" id="opt-real-activity" /> Solo sesiones con actividad real</label>
+            <label><input type="checkbox" id="opt-raw-json" /> Incluir datos crudos JSON al final</label>
+          </div>
+        </section>
+
+        <!-- Nota -->
+        <section class="modal-sec">
+          <h3 class="sec-title">Nota de esta exportación</h3>
+          <input id="export-note" type="text" class="modal-input"
+                 placeholder="Ej: Exportación para mejorar respuestas de cursos vacacionales junio 2026" />
+        </section>
+
+        <!-- Historial -->
+        <section class="modal-sec">
+          <button id="btn-toggle-history" class="btn-ghost">Historial de exportaciones</button>
+          <div id="export-history" class="export-history hidden"></div>
+        </section>
+
+      </div>
+
+      <div class="modal-footer">
+        <button id="btn-export-cancel" class="btn-ghost">Cancelar</button>
+        <button id="btn-export-norecord" class="btn-ghost">Descargar sin registrar</button>
+        <button id="btn-export-record" class="btn-primary">Descargar y registrar</button>
+      </div>
+    </div>
   </div>
 
   <div id="overlay" class="hidden"></div>
