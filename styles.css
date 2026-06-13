@@ -383,6 +383,18 @@ header {
 
 #filter-search { flex: 1; min-width: 180px; max-width: 260px; }
 
+.filter-check {
+  align-items: center;
+  color: var(--ink-2, var(--ink));
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  gap: 6px;
+  user-select: none;
+  white-space: nowrap;
+}
+.filter-check input { accent-color: var(--mozart); cursor: pointer; }
+
 .btn-ghost {
   background: transparent;
   border: 1px solid var(--line);
@@ -948,6 +960,18 @@ tbody tr.row-lead .td-nombre {
 .ev-time  { color: var(--ink-3); font-size: 11px; white-space: nowrap; }
 .ev-text  { color: var(--ink); font-size: 12px; line-height: 1.45; margin-top: 3px; }
 .ev-meta  { color: var(--ink-3); font-size: 11px; margin-top: 2px; }
+
+.ev-flag {
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.ev-flag-return { background: rgba(28, 150, 80, .12); color: #1c9650; }
+.ev-flag-leave  { background: rgba(200, 50, 50, .10); color: #c03232; }
+
+.msg-nodes { color: var(--ink-3); font-size: 11px; margin-top: 4px; }
 
 /* ─── Misc states ─────────────────────────────────────────────────────────── */
 .loading-msg {

@@ -146,6 +146,9 @@
         <input id="filter-min-events" type="number" min="0" step="1" placeholder="Mín. eventos" title="Mínimo de eventos" />
         <input id="filter-from" type="date" title="Desde" />
         <input id="filter-to"   type="date" title="Hasta" />
+        <label class="filter-check" title="Oculta sesiones, eventos y gaps registrados en pruebas (env = dev)">
+          <input type="checkbox" id="filter-hide-dev" checked /> Ocultar sesiones de prueba
+        </label>
         <button id="btn-quick-wa" class="btn-ghost">Ver solo WhatsApp</button>
         <button id="btn-quick-pending" class="btn-ghost">Ver pendientes para IA</button>
         <button id="btn-clear-filters" class="btn-ghost">Limpiar todo</button>

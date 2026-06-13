@@ -17,6 +17,14 @@ let filters = {
 };
 let gapFilters = { status: "new", lang: "" };
 
+// Ocultar datos de prueba (env === "dev"). Los documentos viejos sin "env"
+// se tratan como producción.
+let hideDevData = true;
+const isDevEnv = (x) => (x?.env || "prod") === "dev";
+const applyEnvFilter = (list) => hideDevData ? (list || []).filter((x) => !isDevEnv(x)) : (list || []);
+const visibleSessions = () => applyEnvFilter(allSessions);
+const visibleGaps = () => applyEnvFilter(allGaps);
+
 let gapSubtab = "registered";
 
 // Caches para vistas que requieren eventos
@@ -201,6 +209,21 @@ bindFilter("filter-to", "to");
 
 $("btn-clear-filters").addEventListener("click", clearAllFilters);
 
+$("filter-hide-dev")?.addEventListener("change", (e) => {
+  hideDevData = e.target.checked;
+  sessionsWithEventsCache = null;   // el caché incluye eventos ya filtrados por env
+  candidateGaps = [];
+  clientMessages = [];
+  renderStats();
+  renderSessions();
+  renderChart7d();
+  populateArteFilter();
+  populateSourceFilter();
+  renderGaps();
+  renderCandidateGaps();
+  renderClientMessages();
+});
+
 function clearAllFilters() {
   filters = {
     search: "", arte: "", modalidad: "", from: "", to: "",
@@ -379,7 +402,7 @@ function renderFunnel({ total, interactive, withName, withPhone, withService }) 
 
 // ─── Sessions filter & render ───────────────────────────────────────────────────
 function getFilteredSessions() {
-  return allSessions.filter((s) => {
+  return visibleSessions().filter((s) => {
     const ec = Number(s.events_count || 0);
 
     if (filters.search) {
@@ -438,7 +461,7 @@ function renderSessions() {
   const filtered = getFilteredSessions();
 
   const countEl = $("sessions-count");
-  if (countEl) countEl.textContent = `Mostrando ${filtered.length} de ${allSessions.length} sesiones`;
+  if (countEl) countEl.textContent = `Mostrando ${filtered.length} de ${visibleSessions().length} sesiones`;
 
   renderActiveFilterChips();
 
@@ -492,7 +515,7 @@ function statusChips(s, ec) {
 }
 
 function populateArteFilter() {
-  const artes = [...new Set(allSessions.map((s) => s.arte).filter(Boolean))].sort();
+  const artes = [...new Set(visibleSessions().map((s) => s.arte).filter(Boolean))].sort();
   const select = $("filter-arte");
   const current = select.value;
   select.innerHTML =
@@ -504,7 +527,7 @@ function populateArteFilter() {
 function populateSourceFilter() {
   const select = $("filter-source");
   if (!select) return;
-  const sources = [...new Set(allSessions.map(sessionSource).filter(Boolean))].sort();
+  const sources = [...new Set(visibleSessions().map(sessionSource).filter(Boolean))].sort();
   const current = select.value;
   select.innerHTML =
     `<option value="">Todos los orígenes</option>` +
@@ -528,7 +551,7 @@ async function openSessionDetail(session) {
   try {
     const events = await getSessionEvents(session.id);
     const evSection = $("events-section");
-    if (evSection) evSection.innerHTML = renderEventsTimeline(events);
+    if (evSection) evSection.innerHTML = renderEventsTimeline(applyEnvFilter(events));
   } catch (e) {
     const evSection = $("events-section");
     if (evSection) evSection.innerHTML = `<p class="error-msg">No se pudieron cargar los eventos (puede que las reglas de Firestore no incluyan la subcolección).</p>`;
@@ -615,18 +638,32 @@ function renderEventsTimeline(events) {
   if (label) label.textContent = `Eventos (${events.length})`;
   if (!events.length) return `<p class="muted" style="padding:8px 0;font-size:13px">Sin eventos registrados.</p>`;
 
-  return `<div class="ev-list">${events.map((e) => `
+  return `<div class="ev-list">${events.map((e, i) => {
+    // Un page_leave con un page_return posterior no es abandono real
+    const returned = e.type === "page_leave" &&
+      events.slice(i + 1).some((x) => x.type === "page_return");
+    const leaveBadge = e.type === "page_leave"
+      ? (returned
+          ? `<span class="ev-flag ev-flag-return">volvió ✓</span>`
+          : `<span class="ev-flag ev-flag-leave">abandono</span>`)
+      : "";
+    const node = e.node_name || e.node_id;
+    const nodeLabel = e.type === "user_message" ? "respondía a" : "nodo";
+    const replyNode = e.reply_node_name || e.reply_node_id;
+    return `
     <div class="ev-item">
       <div class="ev-head">
         <span class="ev-type">${esc(e.type || "event")}</span>
+        ${leaveBadge}
         <span class="ev-time">${formatDate(e.ts || e.client_ts)}</span>
       </div>
       ${e.text ? `<div class="ev-text">${esc(String(e.text).slice(0, 300))}</div>` : ""}
-      ${e.node_name ? `<div class="ev-meta">nodo: ${esc(e.node_name)}</div>` : ""}
+      ${node ? `<div class="ev-meta">${nodeLabel}: ${esc(node)}</div>` : ""}
+      ${replyNode ? `<div class="ev-meta">llevó a: ${esc(replyNode)}</div>` : ""}
       ${e.lang ? `<div class="ev-meta">lang: ${esc(e.lang)}</div>` : ""}
       ${e.source ? `<div class="ev-meta">source: ${esc(e.source)}</div>` : ""}
-    </div>
-  `).join("")}</div>`;
+    </div>`;
+  }).join("")}</div>`;
 }
 
 // ─── Knowledge Gaps: registrados ────────────────────────────────────────────────
@@ -634,7 +671,7 @@ function renderGaps() {
   const container = $("gaps-list");
   if (!container) return;
 
-  let filtered = allGaps;
+  let filtered = visibleGaps();
   if (gapFilters.status === "new")
     filtered = filtered.filter((g) => !g.reviewed && g.status !== "reviewed");
   else if (gapFilters.status === "reviewed")
@@ -691,7 +728,8 @@ function renderGaps() {
 // ─── Carga de eventos para análisis (caché) ─────────────────────────────────────
 async function ensureSessionsWithEvents() {
   if (sessionsWithEventsCache) return sessionsWithEventsCache;
-  sessionsWithEventsCache = await getSessionsWithEvents(allSessions);
+  const swe = await getSessionsWithEvents(visibleSessions());
+  sessionsWithEventsCache = swe.map((s) => ({ ...s, events: applyEnvFilter(s.events) }));
   return sessionsWithEventsCache;
 }
 
@@ -938,6 +976,7 @@ function extractUserMessages(sessionsWithEvents) {
         text,
         last_bot_text: lastBot,
         node_name: e.node_name || e.node_id || "",
+        reply_node_name: e.reply_node_name || e.reply_node_id || "",
         source: e.source || sessionSource(s),
         nombre: s.nombre || "", cel: s.cel || "",
         servicio: s.servicio || "", arte: s.arte || "", modalidad: s.modalidad || "",
@@ -1014,6 +1053,7 @@ function renderClientMessages() {
         ${m.cel ? `<span class="schip schip-phone">📞</span>` : `<span class="schip schip-empty">Sin teléfono</span>`}
       </div>
       <div class="msg-text">${esc(m.text)}</div>
+      ${m.node_name || m.reply_node_name ? `<div class="msg-nodes">${m.node_name ? `respondía a: <b>${esc(m.node_name)}</b>` : ""}${m.node_name && m.reply_node_name ? " · " : ""}${m.reply_node_name ? `llevó a: <b>${esc(m.reply_node_name)}</b>` : ""}</div>` : ""}
       ${leadParts.length ? `<div class="gap-lead-info">${leadParts.map(p => `<span class="gap-lead-chip">${esc(p)}</span>`).join("")}</div>` : ""}
       <div class="card-actions">
         <button class="btn-mini" data-act="view" data-sid="${esc(m.session_id)}">Ver sesión</button>
@@ -1109,7 +1149,7 @@ function renderSinceLast() {
   if (!ref) { el.textContent = ""; return; }
   const since = toDate(ref.exported_at);
   if (!since) { el.textContent = ""; return; }
-  const newSessions = allSessions.filter((s) => {
+  const newSessions = visibleSessions().filter((s) => {
     const d = toDate(s.updated_at) || toDate(s.created_at);
     return d && d > since;
   }).length;
@@ -1183,9 +1223,9 @@ function resolveExportScope() {
 }
 
 function getSessionsForExport(scope, fromISO, toISO) {
-  let base = allSessions;
+  let base = visibleSessions();
   if (scope === "current_filters") base = getFilteredSessions();
-  if (scope === "whatsapp_only") base = allSessions.filter((s) => s.whatsapp_clicked);
+  if (scope === "whatsapp_only") base = visibleSessions().filter((s) => s.whatsapp_clicked);
 
   if (fromISO) {
     const f = new Date(fromISO);
@@ -1223,6 +1263,7 @@ async function runExport(register) {
     let gaps = [];
     if (options.gaps || scope === "gaps_only") {
       try { gaps = await getAllKnowledgeGaps(); } catch { gaps = allGaps; }
+      gaps = applyEnvFilter(gaps);
       if (scope === "gaps_only") gaps = gaps.filter((g) => !g.reviewed && g.status !== "reviewed");
     }
 
@@ -1237,7 +1278,7 @@ async function runExport(register) {
     let candGaps = [];
     if (sessions.length && (options.events || options.candidates || options.messages)) {
       const swe = await getSessionsWithEvents(sessions);
-      sessions = swe;
+      sessions = swe.map((s) => ({ ...s, events: applyEnvFilter(s.events) }));
       if (options.candidates) candGaps = detectCandidateGaps(swe);
     }
 
@@ -1412,7 +1453,7 @@ function formatSessionForAi(s) {
     `- Último texto libre: ${mdLine(s.ultimo_texto_usuario || "No registrado")}`,
     `- Historial usuario: ${mdLine(s.historial_usuario || "No registrado")}`,
     "", "Eventos:",
-    ...(s.events || []).map((e) => `- ${formatDate(e.ts || e.client_ts)} | ${mdLine(e.type || "event")} | ${mdLine(e.node_name || e.node_id || e.source || "")}${e.text ? ` | ${mdLine(e.text)}` : ""}`),
+    ...(s.events || []).map((e) => `- ${formatDate(e.ts || e.client_ts)} | ${mdLine(e.type || "event")} | ${mdLine(e.node_name || e.node_id || e.source || "")}${e.reply_node_name || e.reply_node_id ? ` → ${mdLine(e.reply_node_name || e.reply_node_id)}` : ""}${e.text ? ` | ${mdLine(e.text)}` : ""}`),
     ""
   ];
 }
@@ -1431,7 +1472,9 @@ function compactSession(s) {
     events: (s.events || []).map((e) => ({
       ts: serializeDate(e.ts || e.client_ts),
       type: e.type || "", text: e.text || "",
-      node_id: e.node_id || "", node_name: e.node_name || "", source: e.source || ""
+      node_id: e.node_id || "", node_name: e.node_name || "",
+      reply_node_id: e.reply_node_id || "", reply_node_name: e.reply_node_name || "",
+      source: e.source || ""
     }))
   };
 }
@@ -1508,7 +1551,7 @@ function renderChart7d() {
     d.setHours(0, 0, 0, 0);
     days.push({ date: d, count: 0 });
   }
-  for (const s of allSessions) {
+  for (const s of visibleSessions()) {
     const d = toDate(s.created_at);
     if (!d) continue;
     const dayStart = new Date(d);
