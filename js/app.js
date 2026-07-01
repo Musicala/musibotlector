@@ -343,7 +343,17 @@ function hasFreeText(s) {
   return !!(s.primer_texto_usuario || s.ultimo_texto_usuario || s.historial_usuario);
 }
 function sessionSource(s) {
-  return s.primer_origen || s.source || "";
+  return s.acquisition_source || s.last_acquisition_source || "";
+}
+function sourceLabel(value) {
+  const labels = {
+    directo: "Directo", pagina_web: "Página web", website: "Página web",
+    whatsapp: "WhatsApp", instagram: "Instagram", facebook: "Facebook",
+    tiktok: "TikTok", youtube: "YouTube", google: "Google",
+    sin_identificar: "Sin identificar"
+  };
+  const clean = String(value || "").trim();
+  return labels[clean.toLowerCase()] || clean || "Sin identificar";
 }
 
 // ─── Stats & Funnel (reactivos a filtros) ──────────────────────────────────────
@@ -371,6 +381,31 @@ function renderStats() {
   if (note) note.textContent = hasActiveFilters() ? "Datos según filtros activos" : "Datos globales";
 
   renderFunnel({ total, interactive, withName, withPhone, withService });
+  renderSourceSummary(data);
+}
+
+function renderSourceSummary(data) {
+  const container = $("source-summary");
+  if (!container) return;
+  const counts = new Map();
+  data.forEach((s) => {
+    const source = sessionSource(s) || "sin_identificar";
+    counts.set(source, (counts.get(source) || 0) + 1);
+  });
+  const rows = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  container.innerHTML = rows.length
+    ? rows.map(([source, count]) =>
+        `<button class="source-pill" type="button" data-source="${esc(source)}"><span>${esc(sourceLabel(source))}</span><strong>${count}</strong></button>`
+      ).join("")
+    : `<span class="muted">Todavía no hay datos de origen.</span>`;
+  container.querySelectorAll(".source-pill").forEach((button) => {
+    button.addEventListener("click", () => {
+      filters.source = button.dataset.source;
+      $("filter-source").value = filters.source;
+      renderStats();
+      renderSessions();
+    });
+  });
 }
 
 function renderFunnel({ total, interactive, withName, withPhone, withService }) {
@@ -490,6 +525,7 @@ function renderSessions() {
         : '<span class="muted">—</span>'
       }</td>
       <td>${esc(s.edad || "—")}</td>
+      <td><span class="source-badge">${esc(sourceLabel(sessionSource(s)))}</span></td>
       <td class="td-events">${activityBadge(ec)}</td>
       <td class="td-chips">${statusChips(s, ec)}</td>
       <td class="td-date">${formatDate(s.updated_at)}</td>
@@ -531,7 +567,7 @@ function populateSourceFilter() {
   const current = select.value;
   select.innerHTML =
     `<option value="">Todos los orígenes</option>` +
-    sources.map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
+    sources.map((s) => `<option value="${esc(s)}">${esc(sourceLabel(s))}</option>`).join("");
   select.value = sources.includes(current) ? current : "";
 }
 
@@ -581,6 +617,12 @@ function renderSessionFields(s) {
     ["Modalidad", s.modalidad],
     ["Edad", s.edad],
     ["Idioma", s.lang],
+    ["Origen del cliente", sourceLabel(sessionSource(s))],
+    ["Medio", s.acquisition_medium],
+    ["Campaña", s.acquisition_campaign],
+    ["Contenido", s.acquisition_content],
+    ["Página de entrada", s.landing_url],
+    ["Referido por", s.referrer],
     ["Nº eventos", s.events_count],
     ["Mensajes del usuario", s.conteo_mensajes_usuario],
     ["Fue a WhatsApp", s.whatsapp_clicked ? "✅ Sí" : null],
@@ -1449,6 +1491,8 @@ function formatSessionForAi(s) {
     `- Interés: ${mdLine([s.servicio, s.arte, s.modalidad, s.edad].filter(Boolean).join(" / ") || "Sin datos")}`,
     `- Idioma: ${mdLine(s.lang || "No registrado")}`,
     `- WhatsApp: ${s.whatsapp_clicked ? "Sí" : "No"}`,
+    `- Origen: ${mdLine(sourceLabel(sessionSource(s)))}`,
+    `- Campaña: ${mdLine(s.acquisition_campaign || "No registrada")}`,
     `- Primer texto libre: ${mdLine(s.primer_texto_usuario || "No registrado")}`,
     `- Último texto libre: ${mdLine(s.ultimo_texto_usuario || "No registrado")}`,
     `- Historial usuario: ${mdLine(s.historial_usuario || "No registrado")}`,
@@ -1466,6 +1510,11 @@ function compactSession(s) {
     nombre: s.nombre || "", cel: s.cel || "", servicio: s.servicio || "",
     arte: s.arte || "", modalidad: s.modalidad || "", edad: s.edad || "",
     lang: s.lang || "", whatsapp_clicked: Boolean(s.whatsapp_clicked),
+    acquisition_source: sessionSource(s),
+    acquisition_medium: s.acquisition_medium || "",
+    acquisition_campaign: s.acquisition_campaign || "",
+    landing_url: s.landing_url || "",
+    referrer: s.referrer || "",
     primer_texto_usuario: s.primer_texto_usuario || "",
     ultimo_texto_usuario: s.ultimo_texto_usuario || "",
     historial_usuario: s.historial_usuario || "",

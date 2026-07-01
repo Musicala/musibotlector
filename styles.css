@@ -994,6 +994,27 @@ tbody tr.row-lead .td-nombre {
 /* ═══ AMPLIACIONES MusiBot Lector ═══════════════════════════════════════════ */
 
 /* ─── Filtros: input numérico mín. eventos ────────────────────────────────── */
+.source-summary-card {
+  margin: 14px 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.source-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.source-pill {
+  display: inline-flex; align-items: center; gap: 9px; padding: 7px 11px;
+  border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--ink); cursor: pointer;
+}
+.source-pill:hover { border-color: var(--mozart); }
+.source-pill strong { color: var(--mozart); }
+.source-badge {
+  display: inline-block; padding: 4px 8px; border-radius: 999px;
+  background: rgba(80, 76, 180, .1); color: var(--mozart);
+  font-size: 11px; font-weight: 800; white-space: nowrap;
+}
+
 #filter-min-events { width: 110px; }
 
 /* ─── Meta de la tabla (conteo + nota de scope) ───────────────────────────── */
